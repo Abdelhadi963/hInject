@@ -1,0 +1,37 @@
+{
+  "api_hashes": {
+    "CreateThread": "0x544E304",
+    "CreateRemoteThread": "0x844E304",
+    "VirtualAllocEx": "0x6C11198",
+    "WriteProcessMemory": "0x90167B9",
+    "CloseHandle": "0x6426BE5",
+    "CreateProcessA": "0x609EA21",
+    "GetModuleHandleExA": "0x949AF41",
+    "FindResourceA": "0x572E561",
+    "LoadResource": "0x42FDC45",
+    "LockResource": "0x52FDC45",
+    "SizeofResource": "0x72FDC45",
+    "VirtualAlloc": "0x55F63C3",
+    "VirtualFree": "0x4404185",
+    "VirtualFreeEx": "0x4A5D998",
+    "GetProcAddress": "0x835F253",
+    "CreateFileA": "0x5026961",
+    "ReadFile": "0x4acdfe5",
+    "GetModuleHandleA": "0x8d1e961",
+    "OpenProcess":"0x006d47253"
+  },
+  "dlls": [
+    {
+      "name": "kernel32.dll",
+      "encrypted_bytes": "\\xC8\\x95\\xEB\\xA0\\x64\\x4B\\xE2\\xBB\\xDC\\x5E\\xF4\\x5E"
+    },
+    {
+      "name": "user32.dll",
+      "encrypted_bytes": "\\xD6\\x83\\xFC\\xBC\\x32\\x15\\xFF\\xED\\x9E\\x56"
+    },
+    {
+      "name": "advapi32.dll",
+      "encrypted_bytes": "\\xC2\\x94\\xEF\\xAF\\x71\\x4E\\xE2\\xBB\\xDC\\x5E\\xF4\\x5E"
+    }
+  ]
+}
