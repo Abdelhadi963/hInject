@@ -3,7 +3,8 @@
 // Used by Reflective.rc
 //
 #define IDR_COFFE1                      101
-#define IDR_SUZUME1                     102
+#define IDR_SUZUME1                      102
+
 
 // Next default values for new objects
 // 

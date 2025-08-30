@@ -383,7 +383,7 @@ int _stricmp(const char* a, const char* b) {
 }
 
 void print_help(const char* prog_name) {
-    printf("\n=== %s Help ===\n\n", prog_name);
+    printf("\n %s Is A Simple Potatos loader by @IppY0kai\n\n", prog_name);
     printf("Usage:\n");
     printf("  %s [-m|--method] <method> [--hex <hexstring>] [-i <ip> -p <port> -f <file>]\n", prog_name);
     printf("       [--elevate [--server-ip <ip> --server-port <port>] --reuse\n");
@@ -424,10 +424,10 @@ void arg_parser(int argc, char* argv[]) {
     const char* http_ip = NULL;
     int http_port = 0;
     const char* http_file = NULL;
-
+	const char* prog_name = "hInject";
     for (int i = 1; i < argc; i++) {
         if (_stricmp(argv[i], "-h") == 0 || _stricmp(argv[i], "--help") == 0) {
-            print_help(argv[0]);
+            print_help(prog_name);
             exit(EXIT_SUCCESS);
         }
 
@@ -485,7 +485,7 @@ void arg_parser(int argc, char* argv[]) {
                 exit(EXIT_FAILURE);
             }
         }
-
+        
         // --- Elevate parsing ---
         if (_stricmp(argv[i], "--elevate") == 0) {
             elevate = 1;

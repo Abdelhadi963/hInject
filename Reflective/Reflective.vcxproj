@@ -135,12 +135,10 @@
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\Desktop\coffe.bin" />
-    <None Include="..\..\..\..\Desktop\daijin.bin" />
     <None Include="obfuscation.json" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Reflective.rc" />
+    <ResourceCompile Include="hInject.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

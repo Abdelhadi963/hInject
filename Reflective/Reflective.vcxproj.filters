@@ -32,24 +32,18 @@
     <ClInclude Include="core.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="parser.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Resource Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="obfuscation.json" />
-    <None Include="..\..\..\..\Desktop\coffe.bin">
-      <Filter>Resource Files</Filter>
-    </None>
-    <None Include="..\..\..\..\Desktop\daijin.bin">
-      <Filter>Resource Files</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="Reflective.rc">
+    <ResourceCompile Include="hInject.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
