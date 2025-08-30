@@ -7,8 +7,8 @@ It includes several methods for shellcode delivery, such as:
 - **HTTP method**: fetches the shellcode from a remote HTTP server.  
 - **HEX**:  pull the shellcode as hex from the stdin doesn't work with UAC bypass i.e `--elevate` cause donut shellcode for UAC bypass is too big to pass in stdin.  
 
-**hInject** also has a UAC bypass implementation of **CVE-2024-6769** from [fortra/CVE-2024-6769][https://github.com/fortra/CVE-2024-6769].  
-It was a pain to re-implement, but I included the DLL that I created as a resource in the repo. Using [**Donut**][https://github.com/TheWover/donut], I converted the UAC bypass into position-independent shellcode and included it as a resource. It will be triggered using `--elevate`. Of course, your DLLs will be pulled from your remote server. It does not always work, but give it a chance — you might get local admin access.  
+**hInject** also has a UAC bypass implementation of **CVE-2024-6769** from [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769).  
+It was a pain to re-implement, but I included the DLL that I created as a resource in the repo. Using [**Donut**](https://github.com/TheWover/donut), I converted the UAC bypass into position-independent shellcode to be injected in order to trigger the baypass chain.
 
 #### Around AV Advices
 **hInject** is very easy to modify and understand. You can remove anything that doesn’t fit your needs:  
@@ -16,21 +16,21 @@ It was a pain to re-implement, but I included the DLL that I created as a resour
 - If you don’t need resources, just remove them and comment out the corresponding code to make it harder to inspect.  
 - You can also remove the UAC bypass resource and pull it from a remote HTTP server using the HTTP method if you want to minimize entropy and the size of the `.rsc` section (since Defender might detect it because of that).  
 
- it actually performed well against Windows Defender in a Windows 11 VM with Defender enabled, as shown in the demos.  
+ it actually performed well against Windows Defender in a Windows 11 box with Defender enabled, as shown in the demo.  
 
 Feel free to extend it with other custom methods. Next time, I will implement a native API shellcode injector — but this one is a good beginning, I guess.  
-
+### lab env
 Testing environment: a Windows 11 with Microsoft Defender enabled
 ```powershell
 systeminfo | findstr /B /C:"Host Name" /C:"Os Name" /C:"Os Version"
 ```
-![[Pasted image 20250829230114.png]]
+![System Info](images/Pasted image 20250829230114.png)
 defender features status
 ```powershell
 Get-MpComputerStatus | Select-Object AMServiceEnabled, AntispywareEnabled, AntivirusEnabled, BehaviorMonitorEnabled, IoavProtectionEnabled, OnAccessProtectionEnabled, RealTimeProtectionEnabled, NISEnabled
 ```
-![[Pasted image 20250829230615.png]]
-
+![AV-status](Pasted image 20250829230615.png)
+### Import Address Tables
 i compiled the **hInject** as it is  in the repo with defender will upload files to the cloud for 10s but no thread is detected so we passed some static first checks we can use `rasta mouse` tool too for thread detection to see is there any bad bytes that might trigger static detection (in my main windows 11 host). & there is no dad byte or something triggerd
 ![[Pasted image 20250830011113.png]]
 
