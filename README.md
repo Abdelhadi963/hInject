@@ -12,7 +12,7 @@
 
 ## UAC Bypass
 
-**hInject** includes a UAC bypass implementation for **CVE-2024-6769**, based on [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769). The bypass is converted into position-independent shellcode using [Donut](https://github.com/TheWover/donut) and embedded as a resource. It can be triggered with the `--elevate` flag. The required DLLs can be pulled from a remote server. Note that the bypass is not guaranteed to work and may require administrative privileges in some cases.
+**hInject** includes a UAC bypass implementation for **CVE-2024-6769**, based on [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769). The bypass is converted into position-independent shellcode using [Donut](https://github.com/TheWover/donut) It can be triggered with the `--elevate` flag. The required DLLs can be pulled from a remote server. Note that the bypass is not guaranteed to work and may require administrative privileges in some cases.
 
 For details, see the [fortra/CVE-2024-6769](https://github.com/fortra/CVE-2024-6769) repository.
 
@@ -33,7 +33,7 @@ The tests were conducted on a Windows 11 system with Microsoft Defender enabled.
 ```powershell
 systeminfo | findstr /B /C:"Host Name" /C:"Os Name" /C:"Os Version"
 ```
-![System Information](images/Pasted_image_20250829230114.png)
+![System Information](images/Pasted image 20250829230114.png)
 
 ### Defender Features Status
 ```powershell
